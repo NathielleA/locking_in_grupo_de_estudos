@@ -17,9 +17,12 @@ export default function BackgroundUploader({ onBackgroundChange }) {
         setUploading(true);
 
         try {
+            const formData = new FormData();
+            formData.append('file', file);
+
             const response = await fetch(`/api/upload-background?filename=${file.name}`, {
                 method: 'POST',
-                body: file,
+                body: formData,
             });
 
             const newBlob = await response.json();
