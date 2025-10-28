@@ -4,21 +4,21 @@ import TodoList from "@/components/TodoList";
 import PomodoroTimer from "@/components/PomodoroTimer";
 import BackgroundUploader from "@/components/BackgroundUploader";
 import MusicPlayer from "@/components/MusicPlayer";
+import VideoRoom from "@/components/VideoRoom";
 
 export default function Home() {
-  const [backgroundUrl, setBackgroundUrl] = useState<string>(
-    "/backgrounds/pixel-art-1.png"
-  );
+  const [backgroundUrl, setBackgroundUrl] = useState<string>("/backgrounds/pixel-art-1.png");
   const [mounted, setMounted] = useState(false);
+  const [isBreak, setIsBreak] = useState(false); // 👈 controle vindo do Pomodoro
 
   useEffect(() => {
-    // disparar animação após montar
     const t = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(t);
   }, []);
 
-  const handleBreakChange = (isBreak: boolean) => {
-    console.log("Agora é pausa?", isBreak);
+  const handleBreakChange = (breakState: boolean) => {
+    console.log("Agora é pausa?", breakState);
+    setIsBreak(breakState);
   };
 
   const handleBackgroundChange = (url: string) => {
@@ -47,21 +47,20 @@ export default function Home() {
 
       <hr className="my-8 border-gray-400/40" />
 
-      {/* Agrupando Pomodoro e ToDoList no canto direito com animação */}
+      {/* Agrupando Pomodoro e ToDoList no canto direito */}
       <div
         className="absolute top-6 right-6 z-10 flex flex-col items-end gap-6"
         aria-hidden={!mounted}
       >
-        {/* Pomodoro - entra primeiro */}
+        {/* Pomodoro */}
         <div
           className={`transform transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             }`}
-          style={{ transitionDelay: mounted ? "0ms" : "0ms" }}
         >
           <PomodoroTimer onBreakChange={handleBreakChange} />
         </div>
 
-        {/* ToDoList - entra logo em seguida (pequeno stagger) */}
+        {/* ToDoList */}
         <div
           className={`transform transition-all duration-700 ease-out ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             }`}
@@ -77,6 +76,14 @@ export default function Home() {
         <BackgroundUploader onBackgroundChange={handleBackgroundChange} />
       </div>
 
+      {/* 🎥 VideoRoom - fixo no topo esquerdo */}
+      <div className="fixed left-5 top-5 z-50">
+        <VideoRoom
+          roomId="default-room"
+          isBreak={isBreak}
+          signalingUrl="wss://your-signaling-server-url"
+        />
+      </div>
     </main>
   );
 }
