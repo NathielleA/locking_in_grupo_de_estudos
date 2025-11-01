@@ -23,24 +23,34 @@ export default function handler(req, res) {
                 // Envia para todos na sala o nome do novo participante
                 io.to(data.roomId).emit("user-joined", { id: socket.id, name: data.name });
 
-                if (clients.size === 2) {
-                    // só o segundo recebe "ready"
-                    const [firstClientId] = [...clients];
-                    const secondClientId = [...clients][1];
-                    io.to(secondClientId).emit("ready");
+                if (clients.size > 1) {
+                    // Todos os outros participantes recebem "ready" do novo
+                    [...clients].forEach((clientId) => {
+                        if (clientId !== socket.id) {
+                            io.to(clientId).emit("ready", { from: socket.id });
+                            // O novo também recebe "ready" dos outros
+                            io.to(socket.id).emit("ready", { from: clientId });
+                        }
+                    });
                 }
             });
 
             socket.on("offer", (data) => {
-                socket.to(data.roomId).emit("offer", data.offer);
+                if (data.to) {
+                    io.to(data.to).emit("offer", { offer: data.offer, from: socket.id });
+                }
             });
 
             socket.on("answer", (data) => {
-                socket.to(data.roomId).emit("answer", data.answer);
+                if (data.to) {
+                    io.to(data.to).emit("answer", { answer: data.answer, from: socket.id });
+                }
             });
 
             socket.on("candidate", (data) => {
-                socket.to(data.roomId).emit("candidate", data.candidate);
+                if (data.to) {
+                    io.to(data.to).emit("candidate", { candidate: data.candidate, from: socket.id });
+                }
             });
         });
 
