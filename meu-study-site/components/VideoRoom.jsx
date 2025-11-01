@@ -13,6 +13,35 @@ export default function VideoRoom({ userName, roomId, socket }) {
     const [, forceUpdate] = useState({});
 
     useEffect(() => {
+        // Recebe lista completa de participantes ao entrar na sala
+        socket.off("participants-list");
+        socket.on("participants-list", (list) => {
+            if (Array.isArray(list)) {
+                setParticipants(list);
+                forceUpdate({});
+                // Para cada participante já presente, cria peer connection e adiciona tracks
+                list.forEach((p) => {
+                    if (p.id !== socket.id && !peersRef.current[p.id]) {
+                        const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+                        peersRef.current[p.id] = pc;
+                        if (localStreamRef.current) {
+                            localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current));
+                        }
+                        pc.ontrack = (event) => {
+                            remoteStreamsRef.current[p.id] = event.streams[0];
+                            forceUpdate({});
+                        };
+                        pc.onicecandidate = (event) => {
+                            if (event.candidate) {
+                                socket.emit("candidate", { roomId, candidate: event.candidate, to: p.id });
+                            }
+                        };
+                        // Envia ready para iniciar negociação
+                        socket.emit("ready", { from: socket.id, to: p.id, roomId });
+                    }
+                });
+            }
+        });
         if (!roomId || !socket) return;
 
         socket.emit("join", { roomId, name: userName });

@@ -11,6 +11,10 @@ export default function handler(req, res) {
         res.socket.server.io = io;
 
         io.on("connection", (socket) => {
+            // Salva url do participante com name=nome_escrito
+            socket.on("save-url", ({ url }) => {
+                socket.data.url = url;
+            });
             console.log("Novo cliente:", socket.id);
 
             socket.on("join", (data) => {
@@ -20,10 +24,19 @@ export default function handler(req, res) {
                 const clients = io.sockets.adapter.rooms.get(data.roomId);
                 console.log("Sala", data.roomId, ":", clients.size, "conectado(s)");
 
-                // Envia para todos na sala o nome do novo participante
-                io.to(data.roomId).emit("user-joined", { id: socket.id, name: data.name });
+                // Envia lista de participantes atuais para o novo participante
+                if (clients) {
+                    const participants = [...clients].map(id => {
+                        const s = io.sockets.sockets.get(id);
+                        return { id, name: s?.data?.name || "Desconhecido", url: s?.data?.url || null };
+                    });
+                    io.to(socket.id).emit("participants-list", participants);
+                }
 
-                if (clients.size > 1) {
+                // Envia para todos na sala o nome do novo participante
+                io.to(data.roomId).emit("user-joined", { id: socket.id, name: data.name, url: socket.data.url || null });
+
+                if (clients && clients.size > 1) {
                     // Todos os outros participantes recebem "ready" do novo
                     [...clients].forEach((clientId) => {
                         if (clientId !== socket.id) {
@@ -33,6 +46,13 @@ export default function handler(req, res) {
                         }
                     });
                 }
+            });
+            // Ao desconectar, avisa todos na sala para remover o vídeo
+            socket.on("disconnecting", () => {
+                const rooms = Array.from(socket.rooms).filter(r => r !== socket.id);
+                rooms.forEach(roomId => {
+                    io.to(roomId).emit("user-left", { id: socket.id });
+                });
             });
 
             socket.on("offer", (data) => {
