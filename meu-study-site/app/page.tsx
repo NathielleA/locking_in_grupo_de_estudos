@@ -12,6 +12,7 @@ export default function HomePage() {
   const handleCreateRoom = () => {
     if (!name.trim()) return alert("Digite seu nome para criar a sala!");
     const roomId = uuidv4();
+    setShowPopup(false);
     router.push(`/room/${roomId}?name=${encodeURIComponent(name)}`);
   };
 
